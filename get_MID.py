@@ -214,7 +214,18 @@ def extract_mid_from_file(mzml_path, mz_windows, rt_window, ppm):
 
 def main():
     """
-    Takes an ion structure, an mzML file, and retention time to determine an MID.
+    From an ion structure, mzML file, and RT window, determine an MID.
+    Outputs a .csv file and prints a pandas dataframe.  
+    The dataframe has columns:
+        date,         str,   date this script was run
+        ppm,          float, ppm used for mass accuracy
+        ion_smiles,   str,   analyzed ion structure
+        m,            int,  integer mass isotopologue of interest
+        c13_theo_mz,  float, m/z of ion with only m 13C atoms
+        h2_theo_mz,   float, m/z of ion with only m 2H 
+        mean_mz,      float, mean m/z observed in data
+        raw_intensity,float, total intensity in mz_windows and rt_window
+        mid,          float, normalized raw intensities
     """
     #unpack arguments
     args = parse_arguments()
