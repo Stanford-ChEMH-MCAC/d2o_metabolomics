@@ -6,7 +6,7 @@ import datetime
 import argparse
 
 # for reading mzml files
-import pymzml
+from pyteomics import mzml
 
 # for parsing ion structures
 from rdkit import Chem
@@ -171,43 +171,46 @@ def extract_mid_from_file(mzml_path, mz_windows, rt_window, ppm):
                                            mean_mz, the intensity-weighted m/z of the m peak
                                            total_i, the total intensity of isotopologue m
     """
-    # verify mzml file can be opened
-    try:
-        ms1_precision = ppm/1e6
-        run = pymzml.run.Reader(mzml_path, MS1_Precision=ms1_precision)
-    except FileNotFoundError:
-        print('Could not find or read mzML file containing mass spectra.')
-        raise FileNotFoundError
+    with mzml.read(mzml_path) as reader:
+        # identify rt window
+        rt_min, rt_max = tuple(rt_window)
+
+        # initialize output matrix of mean mz and intensities
+        n_rows = mz_windows.shape[0]
+        m_span = range(n_rows)
         
-    # identify rt window
-    rt_min, rt_max = tuple(rt_window)
-    
-    # initialize output matrix of mean mz and intensities
-    n_rows = mz_windows.shape[0]
-    m_span = range(n_rows)
-    
-    mzs = [[] for m in m_span]
-    intensities = [[] for m in m_span]
-    
-    # loop through scans, keeping data points in mz_windows and rt_window only
-    for spec in run:
-        if 'scan start time' in spec.keys():
-            if spec['scan start time'] >= rt_min and spec['scan start time'] <= rt_max:
-                index_mat = np.searchsorted(spec.mz, mz_windows)
+        # initialize lists to store relevant raw data points
+        mzs = [[] for m in m_span]
+        intensities = [[] for m in m_span]
+
+        # loop through scans, keeping data points in mz_windows and rt_window only
+        for spec in reader:
+            try:
+                rt = spec['scanList']['scan'][0]['scan start time']
+            except (KeyError, IndexError):
+                continue
+            if rt >= rt_min and rt <= rt_max:
+                # get raw scan data
+                these_mzs = spec['m/z array']
+                these_intensities = spec['intensity array']
+
+                # index into mz_windows to find relevant data in scan
+                index_mat = np.searchsorted(these_mzs, mz_windows)
                 start = index_mat[:, 0]
                 stop = index_mat[:, 1]
+
                 for m in m_span:
-                    # if there are no mz values in window of interest in given scan, skip
+                    # if scan has no mz values of interest, skip it
                     if start[m] != stop[m]:
-                        mzs[m].extend(list(spec.mz[start[m]:stop[m]]))
-                        intensities[m].extend(list(spec.i[start[m]:stop[m]]))
-    
-    mean_mz = np.asarray([np.ma.average(mzs[m], weights=intensities[m]) for m in m_span])
-    total_i = np.asarray([np.sum(intensities[m]) for m in m_span])
-    
-    return({'m': np.asarray(m_span), 
-           'mean_mz': mean_mz, 
-           'total_i': total_i})
+                        mzs[m].extend(list(these_mzs[start[m]:stop[m]]))
+                        intensities[m].extend(list(these_intensities[start[m]:stop[m]]))
+
+        mean_mz = np.asarray([np.average(mzs[m], weights=intensities[m]) for m in m_span])
+        total_i = np.asarray([np.sum(intensities[m]) for m in m_span])
+
+        return({'m': np.asarray(m_span), 
+               'mean_mz': mean_mz, 
+               'total_i': total_i})
 
 def main():
     """
