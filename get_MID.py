@@ -36,9 +36,27 @@ def parse_arguments():
             "--structure", 
             action='store',
             help="SMILES string or path to .sdf file of a single ion structure",
-            required=True,
+            required=False,
             type=str
                         )
+                        
+        parser.add_argument(
+            '-d',
+            "--monoisotopic_mz", 
+            action='store',
+            help="Monoisotopic m/z of ion in Daltons, if -s is not provided",
+            required=False,
+            type=float
+                        )   
+                        
+        parser.add_argument(
+            '-z',
+            "--charge", 
+            action='store',
+            help="Absolute charge of ion, if -s is not provided",
+            required=False,
+            type=int
+                        )                      
                         
         parser.add_argument(
             '-o',
@@ -55,8 +73,7 @@ def parse_arguments():
             "--rt_start", 
             action='store',
             help="Retention time in minutes at which to start MID extraction",
-            required=False,
-            default=0,
+            required=True,
             type=float
                         )
         
@@ -65,8 +82,7 @@ def parse_arguments():
             "--rt_stop", 
             action='store',
             help="Retention time in minutes at which to end MID extraction",
-            required=False,
-            default=6,
+            required=True,
             type=float
                         )
         
@@ -91,6 +107,16 @@ def parse_arguments():
                         )
         
         parsed = parser.parse_args()
+        
+        # check that exactly one of -s or (-m and -z) are set
+        if parsed.structure is not None:
+            if (parsed.monoisotopic_mz is not None) or (parsed.charge is not None):
+                raise TypeError('Supply an ion structure or a monoisotopic m/z and charge not both')
+        
+        if parsed.structure is None:
+            if (parsed.monoisotopic_mz is None) or (parsed.charge is None):
+                raise TypeError('At least one ion structure or monoisotopic mass and charge must be supplied.')
+        
         
         return(parsed)
     except ValueError:
@@ -204,8 +230,10 @@ def extract_mid_from_file(mzml_path, mz_windows, rt_window, ppm):
                     if start[m] != stop[m]:
                         mzs[m].extend(list(these_mzs[start[m]:stop[m]]))
                         intensities[m].extend(list(these_intensities[start[m]:stop[m]]))
-
-        mean_mz = np.asarray([np.average(mzs[m], weights=intensities[m]) for m in m_span])
+        try:
+            mean_mz = np.asarray([np.average(mzs[m], weights=intensities[m]) for m in m_span])
+        except ZeroDivisionError:
+            mean_mz = np.asarray([0 for m in m_span])
         total_i = np.asarray([np.sum(intensities[m]) for m in m_span])
 
         return({'m': np.asarray(m_span), 
@@ -214,7 +242,7 @@ def extract_mid_from_file(mzml_path, mz_windows, rt_window, ppm):
 
 def main():
     """
-    From an ion structure, mzML file, and RT window, determine an MID.
+    From an ion structure (or mz and charge), mzML file, and RT window, determine an MID.
     Outputs a .csv file and prints a pandas dataframe.  
     The dataframe has columns:
         date,         str,   date this script was run
@@ -230,11 +258,16 @@ def main():
     #unpack arguments
     args = parse_arguments()
     
-    # determine monoisotopic m/z and charge from structure
-    structure = args.structure
-    ion_info = get_monoisotopic_mz_and_z(structure)
-    monoiso_mz = ion_info['monoiso_mz']
-    charge = ion_info['charge']
+    # determine monoisotopic m/z and charge from structure if structure exists
+    if args.structure is not None:
+        structure = args.structure
+        ion_info = get_monoisotopic_mz_and_z(structure)
+        monoiso_mz = ion_info['monoiso_mz']
+        charge = ion_info['charge']
+    elif args.monoisotopic_mz is not None:
+        monoiso_mz = args.monoisotopic_mz
+        charge = args.charge
+        structure = str(monoiso_mz) + '_' + str(charge)
     
     # determine mz_windows from monoiso_mz
     max_neutrons = args.max_neutrons
