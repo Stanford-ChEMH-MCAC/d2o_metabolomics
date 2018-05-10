@@ -1,8 +1,11 @@
 # d2o_metabolomics
 
-This repository is a public site for accession R and python code that may be useful in analyzing metabolomics experiments with heavy isotope labels.  The repo contains `get_MID.py`, a command-line python script for extracting mass isotopologue distributions from `*.mzML` files, and several [jupyter notebooks](http://jupyter.org/install.html) with R code for analysis of MID data and also analysis of [`xcms`](https://bioconductor.org/packages/release/bioc/html/xcms.html) comparisons of labeled vs. non-labeled metabolomes analyzed by LC-MS.  
+This repository contains R and python code for analyzing metabolomics experiments with heavy isotope (especially deuterium) labels.  The repo contains:
+* `get_MID.py`, a command-line python script for extracting mass isotopologue distributions from `*.mzML` files, 
+* several [jupyter notebooks](http://jupyter.org/install.html) with R code for analysis of MID data 
+* a jupyter notebook for analysis of [`xcms`](https://bioconductor.org/packages/release/bioc/html/xcms.html) comparisons of labeled vs. non-labeled metabolomes analyzed by LC-MS.  
 
-We are publishing the code not because it is a masterwork of software engineering, but because (a) we want to be transparent about how we analyze data that we report and publish on in the scientific literature, and (b) it is at least theoretically possible that the code will be useful to someone else.
+We are publishing the code not because it is a masterwork of software engineering, but because (a) we want to be transparent about how we analyze data that we report and publish on in the scientific literature, and (b) we hope that the code may be useful to someone else.
 
 ## Installation
 
@@ -15,7 +18,7 @@ Requirements are many and varied.  A rough guide:
 * for `get_MID.py`:
 	* python 3.5 or higher
 	* [rdkit](http://www.rdkit.org/), 
-	* [pyteomics](https://pythonhosted.org/pyteomics/) 
+	* [pyteomics](https://pythonhosted.org/pyteomics/) for reading `*.mzML` files
 	* numpy, pandas, and other standard python libraries.
 	
 * for the R-based jupyter notebooks:
@@ -30,7 +33,7 @@ Requirements are many and varied.  A rough guide:
 
 ## Contributing
 
-Pull requests are welcome.  If you use the code, please cite our paper (details forthcoming).
+Pull requests are welcome.  If you use the code, please cite our paper (details forthcoming).  If you have questions about how any bit of this works, please file an [issue](https://github.com/Stanford-ChEMH-MCAC/d2o_metabolomics/issues) here on GitHub.
 
 ## Authors
 
